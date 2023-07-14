@@ -40,8 +40,7 @@ namespace TraderUtils
                 for (int i = 0; i < list.Count; i++)
                 {
                     CustomTrade customTrade = list[i];
-                    int num2 = Player.m_localPlayer.GetInventory()
-                        .CountItems(customTrade.moneyItem.m_itemData.m_shared.m_name, -1, true);
+                    int num2 = CountItems(customTrade.moneyItem.m_itemData.m_shared.m_name);
                     GameObject tradeeElement =
                         UnityEngine.Object.Instantiate<GameObject>(__instance.m_listElement, __instance.m_listRoot);
                     RectTransform rectTransform = tradeeElement.transform as RectTransform;
@@ -177,5 +176,17 @@ namespace TraderUtils
         private static CustomTrade current;
         private static Image moneyIcon;
         internal static ItemDrop coinPrefab;
+
+        public static int CountItems(string name)
+        {
+            int num = 0;
+            foreach (ItemDrop.ItemData itemData in Player.m_localPlayer.GetInventory().m_inventory)
+            {
+                if (name == null || itemData.m_shared.m_name == name)
+                    num += itemData.m_stack;
+            }
+
+            return num;
+        }
     }
 }
