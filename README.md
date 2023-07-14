@@ -44,7 +44,7 @@ To create new trade you need to create new CustomTrade and set its values.
 4. How to set how much is selling? Use `.SetStack(some number)`
 5. How to set what item should player spend to buy this item? Use `.SetMoneyItem("ItemPrefabName")`
 6. How to that world should have some key to buy this item?
-   Use `.SetRequiredGlobalKey("KeyName")` [More about global keys]().
+   Use `.SetRequiredGlobalKey("KeyName")` [More about global keys](#about-global-keys).
 7. How to prevent player from configuring this trade in the configuration? Use `.SetConfigurable(true / false)` **By
    default all trades are configurable**
 8. How to hide this trade, but it can be enabled from the configuration? Use `.SetEnabled((true / false)`
