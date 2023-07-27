@@ -11,4 +11,11 @@ internal static class GOExtension
             prefabName = prefabName.Replace(string.Format(" ({0})", (object)index), "");
         return prefabName;
     }
+    internal static string GetPrefabName(this GameObject gameObject)
+    {
+        string prefabName = Utils.GetPrefabName(gameObject);
+        for (int index = 0; index < 80; ++index)
+            prefabName = prefabName.Replace(string.Format(" ({0})", (object)index), "");
+        return prefabName;
+    }
 }

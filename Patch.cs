@@ -18,83 +18,31 @@ namespace TraderUtils
             moneyIcon = __instance.transform.Find("Store/coins/coin icon").GetComponent<Image>();
         }
 
-        [HarmonyPatch(typeof(StoreGui), nameof(StoreGui.FillList)), HarmonyPrefix, HarmonyWrapSafe]
-        internal static bool StoreGui_FillList(StoreGui __instance)
+        [HarmonyPatch(typeof(StoreGui), nameof(StoreGui.FillList)), HarmonyPostfix, HarmonyWrapSafe]
+        internal static void StoreGui_FillList(StoreGui __instance)
         {
-            List<CustomTrade> source;
-            bool result;
-            if (CustomTrade.traders.TryGetValue(__instance.m_trader.GetPrefabName<Trader>(), out source))
+            if (!CustomTrade.traders.TryGetValue(__instance.m_trader.GetPrefabName(), out List<CustomTrade> trades))
+                return;
+
+            trades = trades.Select(x => x).Where(x => x.enabled).ToList();
+
+            for (var i = 0; i < __instance.m_itemList.Count; i++)
             {
-                int num = __instance.GetSelectedItemIndex();
-                foreach (var obj in __instance.m_itemList)
-                {
-                    Object.Destroy(obj);
-                }
+                var customTrade = trades[i];
+                var itemGO = __instance.m_itemList[i];
+                var playerCoins = CountItems(customTrade.moneyItemName);
+                bool haveEnoughMoney = customTrade.price <= playerCoins;
 
-                __instance.m_itemList.Clear();
-                List<CustomTrade> list = (from x in source
-                    where x.enabled
-                    select x).ToList<CustomTrade>();
-                __instance.m_listRoot.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical,
-                    Mathf.Max(__instance.m_itemlistBaseSize, (float)list.Count * __instance.m_itemSpacing));
-                for (int i = 0; i < list.Count; i++)
-                {
-                    CustomTrade customTrade = list[i];
-                    int num2 = CountItems(customTrade.moneyItem.m_itemData.m_shared.m_name);
-                    GameObject tradeeElement =
-                        UnityEngine.Object.Instantiate<GameObject>(__instance.m_listElement, __instance.m_listRoot);
-                    RectTransform rectTransform = tradeeElement.transform as RectTransform;
-                    tradeeElement.SetActive(true);
-                    rectTransform.anchoredPosition = new Vector2(0f, (float)i * -__instance.m_itemSpacing);
-                    bool flag2 = customTrade.price <= num2;
-                    Image component = tradeeElement.transform.Find("icon").GetComponent<Image>();
-                    component.sprite = customTrade.prefab.m_itemData.GetIcon();
-                    component.color = (flag2 ? Color.white : new Color(1f, 0f, 1f, 0f));
-                    string text = Localization.instance.Localize(customTrade.prefab.m_itemData.m_shared.m_name);
-                    bool flag3 = customTrade.stack > 1;
-                    if (flag3)
-                    {
-                        text = text + " x" + customTrade.stack.ToString();
-                    }
+                var moneyIcon = Utils.FindChild(itemGO.transform, "coin icon").GetComponent<Image>();
+                var iconImage = itemGO.transform.Find("icon").GetComponent<Image>();
+                var nameText = itemGO.transform.Find("name").GetComponent<Text>();
+                var priceText = Utils.FindChild(itemGO.transform, "price").GetComponent<Text>();
 
-                    Text component2 = tradeeElement.transform.Find("name").GetComponent<Text>();
-                    component2.text = text;
-                    component2.color = (flag2 ? Color.white : Color.grey);
-                    UITooltip component3 = tradeeElement.GetComponent<UITooltip>();
-                    component3.m_topic = customTrade.prefab.m_itemData.m_shared.m_name;
-                    component3.m_text = customTrade.prefab.m_itemData.GetTooltip();
-                    Text component4 = Utils.FindChild(tradeeElement.transform, "price").GetComponent<Text>();
-                    component4.text = customTrade.price.ToString();
-                    bool flag4 = !flag2;
-                    if (flag4)
-                    {
-                        component4.color = Color.grey;
-                    }
-
-                    tradeeElement.GetComponent<Button>().onClick.AddListener(delegate()
-                    {
-                        __instance.OnSelectedItem(tradeeElement);
-                    });
-                    __instance.m_itemList.Add(tradeeElement);
-                    var component5 = Utils.FindChild(tradeeElement.transform, "coin icon").GetComponent<Image>();
-                    component5.sprite = customTrade.moneyItem.m_itemData.GetIcon();
-                }
-
-                bool flag5 = num < 0;
-                if (flag5)
-                {
-                    num = 0;
-                }
-
-                __instance.SelectItem(num, false);
-                result = false;
+                moneyIcon.sprite = customTrade.moneyItem.m_itemData.GetIcon();
+                iconImage.color = haveEnoughMoney ? Color.white : new Color(1f, 0.0f, 1f, 0.0f);
+                nameText.color = haveEnoughMoney ? Color.white : Color.grey;
+                priceText.color = haveEnoughMoney ? new Color(1, 0.8069f, 0, 1) : Color.grey;
             }
-            else
-            {
-                result = true;
-            }
-
-            return result;
         }
 
         [HarmonyPatch(typeof(StoreGui), nameof(StoreGui.SelectItem)), HarmonyPostfix, HarmonyWrapSafe]
@@ -107,7 +55,7 @@ namespace TraderUtils
                 x.stack == __instance.m_selectedItem.m_stack &&
                 x.prefab == __instance.m_selectedItem.m_prefab);
 
-            if (current == null)
+            if (current == null || current.moneyItem == null)
             {
                 __instance.m_coinPrefab = coinPrefab;
                 moneyIcon.sprite = coinPrefab.m_itemData.GetIcon();
@@ -173,20 +121,34 @@ namespace TraderUtils
             };
         }
 
+        [HarmonyPatch(typeof(Trader), nameof(Trader.GetAvailableItems)), HarmonyPrefix, HarmonyWrapSafe]
+        internal static bool Trader_GetAvailableItems(Trader __instance, ref List<Trader.TradeItem> __result)
+        {
+            if (CustomTrade.traders.TryGetValue(__instance.GetPrefabName(), out var result))
+            {
+                __result = CustomTrade.ToVanilaTrade(result);
+                return false;
+            }
+
+            return true;
+        }
+
         private static CustomTrade current;
         private static Image moneyIcon;
         internal static ItemDrop coinPrefab;
 
         public static int CountItems(string name)
         {
-            int num = 0;
+            int result = 0;
             foreach (ItemDrop.ItemData itemData in Player.m_localPlayer.GetInventory().m_inventory)
             {
-                if (name == null || itemData.m_shared.m_name == name)
-                    num += itemData.m_stack;
+                if (name == null || itemData.m_shared.m_name == name ||
+                    ObjectDB.instance.GetItemPrefab(name).GetComponent<ItemDrop>().m_itemData.m_shared.m_name ==
+                    itemData.m_shared.m_name)
+                    result += itemData.m_stack;
             }
 
-            return num;
+            return result;
         }
     }
 }

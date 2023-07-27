@@ -11,6 +11,8 @@ namespace TraderUtils
     [Serializable]
     public class CustomTrade
     {
+        static string s => $"[{TradesConfiguration._plugin.Info.ToString()}] ";
+
         public CustomTrade()
         {
             all.Add(this);
@@ -83,7 +85,7 @@ namespace TraderUtils
         {
             return string.Concat(new string[]
             {
-                string.Format("ID: {0}, ", this.ID),
+                string.Format("ID: {0}, ", ID),
                 "TraderName: ",
                 this.m_traderName,
                 ", PrefabName: ",
@@ -91,11 +93,11 @@ namespace TraderUtils
                 ", MoneyItemName: ",
                 this.moneyItemName,
                 ", ",
-                string.Format("Price: {0}, ", this.price),
+                string.Format("Price: {0}, ", price),
                 "GlobalKey: ",
                 this.requiredGlobalKey,
                 ", ",
-                string.Format("Stack: {0}", this.stack)
+                string.Format("Stack: {0}", stack)
             });
         }
 
@@ -111,26 +113,35 @@ namespace TraderUtils
                 var traderOrig = ZNetScene.instance.GetPrefab(trader.Key)?.GetComponent<Trader>();
                 if (!traderOrig)
                 {
-                    Debug.LogError(TradesConfiguration._plugin.Info.ToString() + $" Can't find trader {trader.Key}.");
-                    return;
+                    Debug.LogError($"[{TradesConfiguration._plugin.Info.ToString()}] " +
+                                   $" Can't find trader prefab with name \"{trader.Key}\". " +
+                                   $"Make sure entered name is equal to your gameobject that have Trader and ZNetView components.");
+                    continue;
                 }
 
-                traderOrig.m_items.Clear();
-                foreach (var customTrade in trader.Value.Where(x => x.enabled))
-                {
-                    var item = new Trader.TradeItem
-                    {
-                        m_prefab = customTrade.prefab,
-                        m_price = customTrade.price,
-                        m_stack = customTrade.stack,
-                        m_requiredGlobalKey = customTrade.requiredGlobalKey
-                    };
-                    traderOrig.m_items.Add(item);
-                }
+                traderOrig.m_items = ToVanilaTrade(trader.Value);
             }
 
             onUpdateAllValues?.Invoke();
             if (StoreGui.instance) StoreGui.instance.FillList();
+        }
+
+        internal static List<Trader.TradeItem> ToVanilaTrade(List<CustomTrade> customTrades)
+        {
+            var result = new List<Trader.TradeItem>();
+            foreach (var customTrade in customTrades.Where(x => x.enabled))
+            {
+                var item = new Trader.TradeItem
+                {
+                    m_prefab = customTrade.prefab,
+                    m_price = customTrade.price,
+                    m_stack = customTrade.stack,
+                    m_requiredGlobalKey = customTrade.requiredGlobalKey
+                };
+                result.Add(item);
+            }
+
+            return result;
         }
 
         internal void SetReferences()
@@ -151,12 +162,15 @@ namespace TraderUtils
             prefab = ZNetScene.instance.GetPrefab(prefabName)?.GetComponent<ItemDrop>();
 
             if (!moneyItem)
-                Debug.LogError(TradesConfiguration._plugin.Info.ToString() +
-                               $" Can't find moneyItem {moneyItemName} for trade.");
+            {
+                moneyItem = Patch.coinPrefab;
+                Debug.LogError(s +
+                               $" Can't find item prefab with name {moneyItemName}.");
+            }
 
             if (!prefab)
-                Debug.LogError(TradesConfiguration._plugin.Info.ToString() +
-                               $"Can't find trade item {prefabName} for trade.");
+                Debug.LogError(s +
+                               $"Can't find item prefab with name {prefabName}.");
         }
 
         private static bool patched = false;
@@ -164,6 +178,7 @@ namespace TraderUtils
         internal static UnityAction onUpdateAllValues;
         internal static List<CustomTrade> all = new();
         internal static Dictionary<string, List<CustomTrade>> traders = new();
+
         internal ItemDrop prefab;
         internal ItemDrop moneyItem;
         internal string prefabName;
