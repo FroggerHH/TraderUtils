@@ -104,7 +104,7 @@ namespace TraderUtils
             StoreGui_SelectItem(__instance);
         }
 
-        [HarmonyPatch(typeof(ZNetScene), nameof(StoreGui.Awake)), HarmonyPostfix, HarmonyWrapSafe]
+        [HarmonyPatch(typeof(ZNetScene), nameof(StoreGui.Awake)), HarmonyPostfix, HarmonyWrapSafe, HarmonyPriority(-9999)]
         internal static void ZNetSceneAwake(ZNetScene __instance)
         {
             coinPrefab = __instance.GetPrefab("Coins").GetComponent<ItemDrop>();
