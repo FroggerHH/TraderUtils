@@ -1,19 +1,21 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
-using HarmonyLib;
 using JetBrains.Annotations;
-using static TraderUtils.Patch;
 
 namespace TraderUtils;
 
 [PublicAPI]
 public static class TradesConfiguration
 {
-    internal static BaseUnityPlugin? _plugin = null!;
+    internal static BaseUnityPlugin? _plugin;
+
+    private static bool hasConfigSync = true;
+    private static object? _configSync;
+
+
+    internal static List<TradeConfig> _configs = new();
 
     internal static BaseUnityPlugin plugin
     {
@@ -30,15 +32,12 @@ public static class TradesConfiguration
                 types = e.Types.Where(t => t != null).Select(t => t.GetTypeInfo());
             }
 
-            _plugin = (BaseUnityPlugin)BepInEx.Bootstrap.Chainloader.ManagerObject.GetComponent(types.First(t =>
+            _plugin = (BaseUnityPlugin)Chainloader.ManagerObject.GetComponent(types.First(t =>
                 t.IsClass && typeof(BaseUnityPlugin).IsAssignableFrom(t)));
 
             return _plugin;
         }
     }
-
-    private static bool hasConfigSync = true;
-    private static object? _configSync;
 
     private static object? configSync
     {
@@ -51,8 +50,7 @@ public static class TradesConfiguration
                 configSyncType.GetField("CurrentVersion")
                     .SetValue(_configSync, plugin.Info.Metadata.Version.ToString());
                 configSyncType.GetProperty("IsLocked")!.SetValue(_configSync, true);
-            }
-            else
+            } else
             {
                 hasConfigSync = false;
             }
@@ -63,7 +61,7 @@ public static class TradesConfiguration
 
     private static ConfigEntry<T> config<T>(string group, string name, T value, ConfigDescription description)
     {
-        ConfigEntry<T> configEntry = plugin.Config.Bind(group, name, value, description);
+        var configEntry = plugin.Config.Bind(group, name, value, description);
 
         configSync?.GetType().GetMethod("AddConfigEntry")!.MakeGenericMethod(typeof(T))
             .Invoke(configSync, new object[] { configEntry });
@@ -71,18 +69,17 @@ public static class TradesConfiguration
         return configEntry;
     }
 
-    private static ConfigEntry<T> config<T>(string group, string name, T value, string description) =>
-        config(group, name, value, new ConfigDescription(description));
-
-
-    internal static List<CustomTrade.TradeConfig> _configs = new();
-
-    internal static CustomTrade.TradeConfig BindConfig(CustomTrade trade)
+    private static ConfigEntry<T> config<T>(string group, string name, T value, string description)
     {
-        bool SaveOnConfigSet = plugin.Config.SaveOnConfigSet;
+        return config(group, name, value, new ConfigDescription(description));
+    }
+
+    internal static TradeConfig BindConfig(CustomTrade trade)
+    {
+        var SaveOnConfigSet = plugin.Config.SaveOnConfigSet;
         plugin.Config.SaveOnConfigSet = false;
 
-        var result = new CustomTrade.TradeConfig();
+        var result = new TradeConfig();
         var group = $"Trades of {trade.m_traderName} - trade {trade.ID}";
         result.prefabName = config(group, "Item to buy", trade.prefabName, "");
         result.moneyItemName = config(group, "Money item", trade.moneyItemName, "");
@@ -91,12 +88,12 @@ public static class TradesConfiguration
         result.stack = config(group, "Stack", trade.stack, "");
         result.enabled = config(group, "Enabled", trade.enabled, "");
         trade.config = result;
-        result.prefabName.SettingChanged += (_, _) => CustomTrade.UpdateAllValues();
-        result.moneyItemName.SettingChanged += (_, _) => CustomTrade.UpdateAllValues();
-        result.price.SettingChanged += (_, _) => CustomTrade.UpdateAllValues();
-        result.requiredGlobalKey.SettingChanged += (_, _) => CustomTrade.UpdateAllValues();
-        result.stack.SettingChanged += (_, _) => CustomTrade.UpdateAllValues();
-        result.enabled.SettingChanged += (_, _) => CustomTrade.UpdateAllValues();
+        result.prefabName.SettingChanged += (_, _) => UpdateAllValues();
+        result.moneyItemName.SettingChanged += (_, _) => UpdateAllValues();
+        result.price.SettingChanged += (_, _) => UpdateAllValues();
+        result.requiredGlobalKey.SettingChanged += (_, _) => UpdateAllValues();
+        result.stack.SettingChanged += (_, _) => UpdateAllValues();
+        result.enabled.SettingChanged += (_, _) => UpdateAllValues();
 
         if (SaveOnConfigSet)
         {
