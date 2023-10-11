@@ -1,4 +1,5 @@
-﻿using UnityEngine.UI;
+﻿using TMPro;
+using UnityEngine.UI;
 
 namespace TraderUtils;
 
@@ -24,21 +25,22 @@ internal static class Patch
         trades = trades.Select(x => x).Where(x => x.enabled).ToList();
 
         foreach (var obj in __instance.m_itemList)
-        { 
+        {
             var iconImage = obj.transform.Find("icon").GetComponent<Image>();
-            var priceText = obj.transform.FindChildByName("price").GetComponent<Text>();
+            var priceText = obj.transform.FindChildByName("price").GetComponent<TextMeshProUGUI>();
             var customTrade = all.Find(x =>
                 x.prefab.m_itemData.GetIcon() == iconImage.sprite && x.price == int.Parse(priceText.text));
             if (customTrade == null) continue;
             obj.SetActive(customTrade.enabled);
- 
+
             var moneyIcon = Utils.FindChild(obj.transform, "coin icon").GetComponent<Image>();
-            var nameText = obj.transform.Find("name").GetComponent<Text>();
+            var nameText = obj.transform.Find("name")?.GetComponent<TextMeshProUGUI>();
+
             var haveEnoughMoney = customTrade.price <= CountItems(customTrade.moneyItemName);
 
             moneyIcon.sprite = customTrade.moneyItem.m_itemData.GetIcon();
             iconImage.color = haveEnoughMoney ? Color.white : new Color(1f, 0.0f, 1f, 0.0f);
-            nameText.color = haveEnoughMoney ? Color.white : Color.grey; 
+            nameText.color = haveEnoughMoney ? Color.white : Color.grey;
             priceText.color = haveEnoughMoney ? new Color(1, 0.8069f, 0, 1) : Color.grey;
         }
 
@@ -50,8 +52,8 @@ internal static class Patch
         //
         //     var moneyIcon = Utils.FindChild(itemGO.transform, "coin icon").GetComponent<Image>();
         //     var iconImage = itemGO.transform.Find("icon").GetComponent<Image>();
-        //     var nameText = itemGO.transform.Find("name").GetComponent<Text>();
-        //     var priceText = Utils.FindChild(itemGO.transform, "price").GetComponent<Text>();
+        //     var nameText = itemGO.transform.Find("name").GetComponent<TextMeshProUGUI>();
+        //     var priceText = Utils.FindChild(itemGO.transform, "price").GetComponent<TextMeshProUGUI>();
         //
         //     moneyIcon.sprite = customTrade.moneyItem.m_itemData.GetIcon();
         //     iconImage.color = haveEnoughMoney ? Color.white : new Color(1f, 0.0f, 1f, 0.0f);

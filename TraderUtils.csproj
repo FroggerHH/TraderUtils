@@ -50,14 +50,8 @@
         <Reference Include="BepInEx">
             <HintPath>..\..\..\Steam\steamapps\common\Valheim\BepInEx\core\BepInEx.dll</HintPath>
         </Reference>
-        <Reference Include="CreatureManager">
-            <HintPath>..\Utils\CreatureManager.dll</HintPath>
-        </Reference>
         <Reference Include="JFUtils">
             <HintPath>..\Utils\JFUtils.dll</HintPath>
-        </Reference>
-        <Reference Include="LocationManager">
-            <HintPath>..\Utils\LocationManager.dll</HintPath>
         </Reference>
         <Reference Include="ServerSync">
             <HintPath>..\Utils\ServerSync.dll</HintPath>
@@ -66,6 +60,9 @@
         <Reference Include="System.Core" />
         <Reference Include="System.Data" />
         <Reference Include="System.Xml" />
+        <Reference Include="Unity.TextMeshPro">
+          <HintPath>..\..\..\Steam\steamapps\common\Valheim\valheim_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+        </Reference>
         <Reference Include="UnityEngine">
             <HintPath>..\..\Unity\Unity Hub\versions\2020.3.36f1\Editor\Data\Managed\UnityEngine\UnityEngine.dll</HintPath>
         </Reference>
